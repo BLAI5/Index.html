@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2Pines Cycle Timer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .editable-lap-time {
+            cursor: pointer;
+            border-bottom: 2px dotted transparent;
+            transition: border-color 0.2s;
+        }
+
+        .editable-lap-time:hover,
+        .editable-lap-time:focus {
+            outline: none;
+            border-bottom: 2px dotted #9ca3af;
+        }
+
+        .editable-lap-time:focus {
+            border-bottom-color: #3b82f6;
+        }
+
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .dropdown-arrow {
+            transition: transform 0.3s ease;
+        }
+
+        .rotate-arrow {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white min-h-screen p-4">
+
+    <div class="container text-center w-full">
+        <h1 class="text-3xl md:text-4xl font-bold mb-2">2Pines Cycle Timer</h1>
+        <input type="text" id="secondaryTitleInput" placeholder="Enter a title (e.g., 'Edge Sander')"
+            class="w-full text-center bg-transparent text-gray-400 text-base sm:text-lg md:text-xl font-light mb-8 focus:outline-none focus:border-b-2 focus:border-gray-500">
+
+        <!-- Timer Display -->
+        <div class="mb-8">
+            <div class="text-sm font-semibold text-gray-400">Total</div>
+            <div id="mainTimeDisplay" class="text-2xl md:text-3xl font-bold tracking-tight">00:00:00</div>
+            <div class="text-sm font-semibold text-gray-400 mt-4">Lap</div>
+            <div id="currentLapDisplay" class="text-5xl md:text-7xl text-gray-500 mt-2">00:00:00</div>
+        </div>
+
+        <!-- Range Inputs -->
+        <div class="mb-8 p-3 bg-gray-800 rounded-lg shadow-inner">
+            <h3 class="text-lg font-bold mb-2">Target Range</h3>
+            <div class="flex flex-wrap justify-center items-center space-x-2">
+                <!-- Minimum Time Group -->
+                <div class="flex items-center space-x-1">
+                    <span class="text-gray-400 text-sm">Min:</span>
+                    <input type="number" id="minHoursInput" placeholder="H" min="0" max="99"
+                        class="w-12 p-1 bg-gray-700 text-white rounded-md text-center">
+                    <span class="text-gray-400 text-sm">:</span>
+                    <input type="number" id="minMinutesInput" placeholder="M" min="0" max="59"
+                        class="w-12 p-1 bg-gray-700 text-white rounded-md text-center">
+                    <span class="text-gray-400 text-sm">:</span>
+                    <input type="number" id="minSecondsInput" placeholder="S" min="0" max="59"
+                        class="w-12 p-1 bg-gray-700 text-white rounded-md text-center">
+                </div>
+                <!-- Maximum Time Group -->
+                <div class="flex items-center space-x-1 mt-2 sm:mt-0">
+                    <span class="text-gray-400 text-sm">Max:</span>
+                    <input type="number" id="maxHoursInput" placeholder="H" min="0" max="99"
+                        class="w-12 p-1 bg-gray-700 text-white rounded-md text-center">
+                    <span class="text-gray-400 text-sm">:</span>
+                    <input type="number" id="maxMinutesInput" placeholder="M" min="0" max="59"
+                        class="w-12 p-1 bg-gray-700 text-white rounded-md text-center">
+                    <span class="text-gray-400 text-sm">:</span>
+                    <input type="number" id="maxSecondsInput" placeholder="S" min="0" max="59"
+                        class="w-12 p-1 bg-gray-700 text-white rounded-md text-center">
+                </div>
+            </div>
+            <div id="rangeStatus" class="h-8 w-32 mt-2 mx-auto rounded-md"></div>
+        </div>
+
+        <!-- Control Buttons -->
+        <div class="flex flex-wrap justify-center space-x-2 sm:space-x-4 mb-8">
+            <button id="resetBtn"
+                class="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-lg transition-transform transform hover:scale-105 active:scale-95 shadow-lg mb-2 sm:mb-0">
+                Reset
+            </button>
+            <button id="pauseBtn"
+                class="bg-yellow-500 text-white px-6 py-3 rounded-full font-semibold text-lg transition-transform transform hover:scale-105 active:scale-95 shadow-lg mb-2 sm:mb-0 hidden">
+                Pause
+            </button>
+            <button id="lapBtn"
+                class="bg-green-600 text-white px-8 py-4 rounded-full font-semibold text-lg transition-transform transform hover:scale-105 active:scale-95 shadow-lg mb-2 sm:mb-0">
+                Lap
+            </button>
+            <button id="startBtn"
+                class="bg-blue-600 text-white px-6 py-3 rounded-full font-semibold text-lg transition-transform transform hover:scale-105 active:scale-95 shadow-lg">
+                Start
+            </button>
+        </div>
+
+        <!-- Notes Dropdown -->
+        <div class="p-3 bg-gray-800 rounded-lg shadow-inner mb-8">
+            <button id="toggleNotesBtn" class="w-full flex justify-between items-center text-lg font-bold">
+                <span>Notes</span>
+                <span id="notesArrow" class="dropdown-arrow">&#9660;</span>
+            </button>
+            <div id="notesContainer" class="mt-4 hidden">
+                <textarea id="notesInput" placeholder="Add notes for this session..."
+                    class="w-full h-32 p-2 bg-gray-700 text-white rounded-md resize-none focus:outline-none focus:border-2 focus:border-gray-500"></textarea>
+            </div>
+        </div>
+
+        <!-- Share & View Dropdown -->
+        <div class="p-3 bg-gray-800 rounded-lg shadow-inner mb-8">
+            <button id="toggleShareSectionBtn" class="w-full flex justify-between items-center text-lg font-bold">
+                <span>Share & View</span>
+                <span id="dropdownArrow" class="dropdown-arrow">&#9660;</span>
+            </button>
+            <div id="linkIdContainer" class="mt-4 hidden">
+                <div class="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4">
+                    <input type="text" id="linkIdInput" placeholder="Paste a Shareable Link"
+                        class="w-full sm:w-auto p-2 bg-gray-700 text-white rounded-md text-center focus:outline-none focus:border-2 focus:border-gray-500">
+                    <div class="flex space-x-2 mt-2 sm:mt-0">
+                        <button id="loadLinkedBtn"
+                            class="bg-gray-600 text-white px-4 py-2 rounded-full font-semibold text-sm transition-transform transform hover:scale-105 active:scale-95 shadow-lg">
+                            Load Link
+                        </button>
+                        <button id="clearLinkInputBtn"
+                            class="bg-gray-500 text-white px-4 py-2 rounded-full font-semibold text-sm transition-transform transform hover:scale-105 active:scale-95 shadow-lg">
+                            Clear Input
+                        </button>
+                    </div>
+                </div>
+                <p class="text-sm mt-4 text-gray-400">To share your session, click the button below to generate a unique
+                    link.</p>
+                <button id="copyShareLinkBtn"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-full font-semibold text-sm transition-transform transform hover:scale-105 active:scale-95 shadow-lg mt-2">
+                    Copy Shareable Link
+                </button>
+                <button id="clearAllLinkedBtn"
+                    class="bg-red-600 text-white px-3 py-1 rounded-full font-semibold text-xs transition-transform transform hover:scale-105 active:scale-95 shadow-lg mt-2">
+                    Clear All Linked Sessions
+                </button>
+                <div id="linkedDataStatus" class="text-sm mt-2"></div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div id="statsContainer" class="w-full max-w-sm mx-auto mb-8">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="text-lg font-bold">Statistics</h3>
+                <button id="printBtn"
+                    class="bg-gray-700 text-white px-3 py-1 rounded-full font-semibold text-sm transition-transform transform hover:scale-105 active:scale-95 shadow-lg">
+                    Print Preview
+                </button>
+            </div>
+            <p id="totalLaps" class="text-gray-300">Total Pieces: 0</p>
+            <p id="averageTime" class="text-gray-300">Average Time: 00:00:00</p>
+            <p id="sessionIdDisplay" class="text-xs text-gray-500 mt-2 break-all"></p>
+        </div>
+
+        <!-- Lap List -->
+        <div class="text-left w-full max-w-sm mx-auto overflow-y-auto max-h-96">
+            <h3 class="text-lg font-bold mb-2">#Pieces</h3>
+            <ul id="lapList">
+                <!-- Lap items will be added here dynamically -->
+            </ul>
+        </div>
+
+        <!-- Linked Lap List -->
+        <div id="linkedLapSection" class="text-left w-full max-w-sm mx-auto overflow-y-auto max-h-96 mt-8 hidden">
+            <h3 class="text-lg font-bold mb-2">Linked Laps</h3>
+            <ul id="linkedLapList">
+                <!-- Linked lap items will be added here dynamically -->
+            </ul>
+        </div>
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirmationModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-xl text-center">
+            <p id="modalMessage" class="text-white text-lg mb-4">Are you sure you want to do this?</p>
+            <div class="flex justify-center space-x-4">
+                <button id="confirmYesBtn" class="bg-red-600 text-white px-4 py-2 rounded-full font-semibold">Yes</button>
+                <button id="confirmCancelBtn" class="bg-gray-600 text-white px-4 py-2 rounded-full font-semibold">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Formats time in H:M:S format
+        function formatTime(milliseconds) {
+            const totalSeconds = Math.floor(milliseconds / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        // Parses time from H:M:S string
+        function parseTime(timeString) {
+            const parts = timeString.split(':');
+            let hours = 0;
+            let minutes = 0;
+            let seconds = 0;
+
+            if (parts.length === 3) {
+                hours = parseInt(parts[0], 10);
+                minutes = parseInt(parts[1], 10);
+                seconds = parseInt(parts[2], 10);
+            } else if (parts.length === 2) {
+                minutes = parseInt(parts[0], 10);
+                seconds = parseInt(parts[1], 10);
+            } else {
+                return null;
+            }
+
+            if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) return null;
+
+            return (hours * 3600000) + (minutes * 60000) + (seconds * 1000);
+        }
+
+        function formatRange(range) {
+            if (!range) return 'N/A';
+            const h = range.h || '0';
+            const m = range.m || '0';
+            const s = range.s || '0';
+            return `${h}:${m}:${s}`;
+        }
+
+        function getRangeMs(hoursInput, minutesInput, secondsInput) {
+            const hours = parseInt(hoursInput.value, 10) || 0;
+            const minutes = parseInt(minutesInput.value, 10) || 0;
+            const seconds = parseInt(secondsInput.value, 10) || 0;
+            return (hours * 3600000) + (minutes * 60000) + (seconds * 1000);
+        }
+
+        const mainTimeDisplay = document.getElementById('mainTimeDisplay');
+        const currentLapDisplay = document.getElementById('currentLapDisplay');
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const lapBtn = document.getElementById('lapBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const printBtn = document.getElementById('printBtn');
+        const totalLapsElement = document.getElementById('totalLaps');
+        const averageTimeElement = document.getElementById('averageTime');
+        const lapList = document.getElementById('lapList');
+        const minHoursInput = document.getElementById('minHoursInput');
+        const minMinutesInput = document.getElementById('minMinutesInput');
+        const minSecondsInput = document.getElementById('minSecondsInput');
+        const maxHoursInput = document.getElementById('maxHoursInput');
+        const maxMinutesInput = document.getElementById('maxMinutesInput');
+        const maxSecondsInput = document.getElementById('maxSecondsInput');
+        const rangeStatus = document.getElementById('rangeStatus');
+        const sessionIdDisplay = document.getElementById('sessionIdDisplay');
+        const linkIdInput = document.getElementById('linkIdInput');
+        const loadLinkedBtn = document.getElementById('loadLinkedBtn');
+        const clearLinkInputBtn = document.getElementById('clearLinkInputBtn');
+        const clearAllLinkedBtn = document.getElementById('clearAllLinkedBtn');
+        const linkedDataStatus = document.getElementById('linkedDataStatus');
+        const linkedLapSection = document.getElementById('linkedLapSection');
+        const linkedLapList = document.getElementById('linkedLapList');
+        const secondaryTitleInput = document.getElementById('secondaryTitleInput');
+        const copyShareLinkBtn = document.getElementById('copyShareLinkBtn');
+        const toggleShareSectionBtn = document.getElementById('toggleShareSectionBtn');
+        const shareSectionContent = document.getElementById('linkIdContainer');
+        const dropdownArrow = document.getElementById('dropdownArrow');
+        const notesInput = document.getElementById('notesInput');
+        const toggleNotesBtn = document.getElementById('toggleNotesBtn');
+        const notesContainer = document.getElementById('notesContainer');
+        const notesArrow = document.getElementById('notesArrow');
+        const confirmationModal = document.getElementById('confirmationModal');
+        const modalMessage = document.getElementById('modalMessage');
+        const confirmYesBtn = document.getElementById('confirmYesBtn');
+        const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+
+        let timer;
+        let isRunning = false;
+        let elapsedTime = 0;
+        let lapStartTime;
+        let pausedLapTime = 0;
+        let laps = [];
+        let linkedSessions = [];
+        let averageMilliseconds = 0;
+        let sessionId = `session_${Math.random().toString(36).substr(2, 9)}`;
+
+        // Event Listeners for the new notes dropdown
+        toggleNotesBtn.addEventListener('click', () => {
+            notesContainer.classList.toggle('hidden');
+            notesArrow.classList.toggle('rotate-arrow');
+        });
+
+        function showConfirmationModal(message, onConfirm) {
+            modalMessage.textContent = message;
+            confirmationModal.classList.remove('hidden');
+
+            const handleYes = () => {
+                onConfirm();
+                hideConfirmationModal();
+                confirmYesBtn.removeEventListener('click', handleYes);
+            };
+
+            const handleCancel = () => {
+                hideConfirmationModal();
+                confirmCancelBtn.removeEventListener('click', handleCancel);
+            };
+
+            confirmYesBtn.addEventListener('click', handleYes);
+            confirmCancelBtn.addEventListener('click', handleCancel);
+        }
+
+        function hideConfirmationModal() {
+            confirmationModal.classList.add('hidden');
+        }
+
+        function updateAllViews() {
+            // Recalculate and update the total elapsed time
+            elapsedTime = laps.reduce((sum, lap) => sum + lap.time, 0);
+            mainTimeDisplay.textContent = formatTime(elapsedTime + pausedLapTime);
+
+            // Update stats section
+            updateStats();
+            // Check and update the range status
+            checkLapRange(averageMilliseconds);
+            // Redraw the list of laps
+            displayLaps(laps, lapList);
+            // Save the current state to local storage
+            saveState();
+        }
+
+        function saveState() {
+            const data = {
+                laps: laps,
+                linkedSessions: linkedSessions,
+                minRange: {
+                    h: minHoursInput.value,
+                    m: minMinutesInput.value,
+                    s: minSecondsInput.value
+                },
+                maxRange: {
+                    h: maxHoursInput.value,
+                    m: maxMinutesInput.value,
+                    s: maxSecondsInput.value
+                },
+                elapsedTime: elapsedTime,
+                pausedLapTime: pausedLapTime,
+                lapStartTime: lapStartTime,
+                isRunning: isRunning,
+                lastUpdated: Date.now(),
+                totalTime: elapsedTime + pausedLapTime,
+                averageTime: laps.length > 0 ? laps.reduce((sum, lap) => sum + lap.time, 0) / laps.length : 0,
+                totalLaps: laps.length,
+                secondaryTitle: secondaryTitleInput.value,
+                notes: notesInput.value
+            };
+            localStorage.setItem('cycleTimerState', JSON.stringify(data));
+        }
+
+        function loadStateFromUrl(encodedData) {
+            try {
+                if (!encodedData) return;
+
+                const decodedData = atob(encodedData);
+                const data = JSON.parse(decodedData);
+
+                if (data.laps) {
+                    linkedSessions.push({
+                        title: data.secondaryTitle || 'Linked Session',
+                        laps: data.laps || [],
+                        averageTime: data.averageTime || 0,
+                        minRange: data.minRange || { h: '', m: '', s: '' },
+                        maxRange: data.maxRange || { h: '', m: '', s: '' },
+                        notes: data.notes || ''
+                    });
+                    linkedDataStatus.textContent = "Data loaded from shared link.";
+                    displayLinkedSessions();
+                } else {
+                    throw new Error("Invalid data format in URL hash.");
+                }
+            } catch (e) {
+                console.error("Failed to load data from URL:", e);
+                linkedDataStatus.textContent = "Error loading data from link.";
+            }
+        }
+
+        function loadState() {
+            sessionIdDisplay.textContent = `Session ID: ${sessionId}`;
+            const urlEncodedData = window.location.hash.substring(1);
+            if (urlEncodedData) {
+                loadStateFromUrl(urlEncodedData);
+            }
+            
+            const savedState = localStorage.getItem('cycleTimerState');
+            if (savedState) {
+                const data = JSON.parse(savedState);
+                laps = data.laps || [];
+                linkedSessions = data.linkedSessions || [];
+                elapsedTime = data.elapsedTime || 0;
+                pausedLapTime = data.pausedLapTime || 0;
+                averageMilliseconds = data.averageTime || 0;
+
+                const minRange = data.minRange || {};
+                const maxRange = data.maxRange || {};
+                minHoursInput.value = minRange.h || '';
+                minMinutesInput.value = minRange.m || '';
+                minSecondsInput.value = minRange.s || '';
+                maxHoursInput.value = maxRange.h || '';
+                maxMinutesInput.value = maxRange.m || '';
+                maxSecondsInput.value = maxRange.s || '';
+                secondaryTitleInput.value = data.secondaryTitle || '';
+                notesInput.value = data.notes || '';
+
+                const wasRunning = data.isRunning;
+                if (wasRunning) {
+                    const timeDifference = Date.now() - data.lastUpdated;
+                    pausedLapTime += timeDifference;
+                    startBtn.classList.add('hidden');
+                    pauseBtn.classList.remove('hidden');
+                    if (!isRunning) {
+                        startTimer();
+                    }
+                } else {
+                    mainTimeDisplay.textContent = formatTime(elapsedTime + pausedLapTime);
+                    currentLapDisplay.textContent = formatTime(pausedLapTime);
+                    startBtn.classList.remove('hidden');
+                    pauseBtn.classList.add('hidden');
+                }
+            } else {
+                console.log("No existing data found in localStorage, starting fresh.");
+            }
+            displayLaps(laps, lapList);
+            displayLinkedSessions();
+            updateStats();
+            checkLapRange(averageMilliseconds);
+        }
+
+        function generateShareableLink() {
+            const dataToShare = {
+                laps: laps,
+                averageTime: averageMilliseconds,
+                totalTime: elapsedTime + pausedLapTime,
+                totalLaps: laps.length,
+                secondaryTitle: secondaryTitleInput.value,
+                notes: notesInput.value,
+                minRange: {
+                    h: minHoursInput.value,
+                    m: minMinutesInput.value,
+                    s: minSecondsInput.value
+                },
+                maxRange: {
+                    h: maxHoursInput.value,
+                    m: maxMinutesInput.value,
+                    s: maxSecondsInput.value
+                }
+            };
+            const jsonString = JSON.stringify(dataToShare);
+            const encodedString = btoa(jsonString);
+            const shareUrl = `${window.location.origin}${window.location.pathname}#${encodedString}`;
+
+            const tempInput = document.createElement('input');
+            tempInput.value = shareUrl;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            linkedDataStatus.textContent = "Link copied to clipboard!";
+            console.log("Shareable URL generated:", shareUrl);
+        }
+
+        function updateTimers() {
+            const currentTime = Date.now();
+            const currentLapTime = (currentTime - lapStartTime) + pausedLapTime;
+            mainTimeDisplay.textContent = formatTime(elapsedTime + currentLapTime);
+            currentLapDisplay.textContent = formatTime(currentLapTime);
+        }
+
+        function startTimer() {
+            if (isRunning) return;
+            isRunning = true;
+            lapStartTime = Date.now();
+            timer = setInterval(updateTimers, 10);
+            startBtn.classList.add('hidden');
+            pauseBtn.classList.remove('hidden');
+            saveState();
+        }
+
+        function pauseTimer() {
+            if (!isRunning) return;
+            clearInterval(timer);
+            isRunning = false;
+            pausedLapTime += Date.now() - lapStartTime;
+            startBtn.classList.remove('hidden');
+            pauseBtn.classList.add('hidden');
+            saveState();
+        }
+
+        function recordLap() {
+            if (!isRunning) return;
+            const lapTime = (Date.now() - lapStartTime) + pausedLapTime;
+            laps.unshift({ time: lapTime, isEdited: false });
+
+            // Recalculate for the new lap
+            elapsedTime = laps.reduce((sum, lap) => sum + lap.time, 0);
+            lapStartTime = Date.now();
+            pausedLapTime = 0;
+
+            // Update all displays and state
+            updateAllViews();
+        }
+
+        function resetTimer() {
+            clearInterval(timer);
+            isRunning = false;
+            elapsedTime = 0;
+            pausedLapTime = 0;
+            laps = [];
+            averageMilliseconds = 0;
+            linkedSessions = [];
+            mainTimeDisplay.textContent = '00:00:00';
+            currentLapDisplay.textContent = '00:00:00';
+            rangeStatus.textContent = '';
+            lapList.innerHTML = '';
+            linkedLapList.innerHTML = '';
+            linkedDataStatus.textContent = '';
+            linkedLapSection.classList.add('hidden');
+            totalLapsElement.textContent = 'Total Pieces: 0';
+            averageTimeElement.textContent = 'Average Time: 00:00:00';
+            minHoursInput.value = '';
+            minMinutesInput.value = '';
+            minSecondsInput.value = '';
+            maxHoursInput.value = '';
+            maxMinutesInput.value = '';
+            maxSecondsInput.value = '';
+            secondaryTitleInput.value = '';
+            notesInput.value = '';
+            startBtn.classList.remove('hidden');
+            pauseBtn.classList.add('hidden');
+            saveState();
+        }
+
+        function displayLaps(lapsArray, listElement) {
+            listElement.innerHTML = '';
+            lapsArray.forEach((lap, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center py-1 border-b border-gray-700 last:border-b-0';
+
+                const highlightClass = lap.isEdited ? 'text-yellow-400' : (lap.time < 5000 ? 'text-red-400 font-bold' : '');
+
+                li.innerHTML = `
+                    <span class="text-sm text-gray-300">#${lapsArray.length - index}</span>
+                    <span class="flex items-center space-x-1">
+                        <span class="font-mono text-lg ${highlightClass} editable-lap-time" contenteditable="true" data-index="${index}">${formatTime(lap.time)}</span>
+                        ${listElement === lapList ? `<button class="remove-lap-btn text-red-500 hover:text-red-400 text-sm font-bold" data-index="${index}">&times;</button>` : ''}
+                    </span>
+                `;
+                listElement.appendChild(li);
+            });
+        }
+
+        function displayLinkedSessions() {
+            linkedLapList.innerHTML = '';
+            if (linkedSessions.length > 0) {
+                linkedSessions.forEach((session, sessionIndex) => {
+                    const sessionHeader = document.createElement('li');
+                    sessionHeader.className = 'flex justify-between items-center text-base font-bold text-gray-400 mt-4 mb-2';
+                    sessionHeader.innerHTML = `
+                        <span>Linked Session: ${session.title}</span>
+                        <button class="remove-linked-session-btn text-red-500 hover:text-red-400 text-sm font-bold" data-index="${sessionIndex}">&times;</button>
+                    `;
+                    linkedLapList.appendChild(sessionHeader);
+
+                    session.laps.forEach((lap, lapIndex) => {
+                        const li = document.createElement('li');
+                        li.className = 'flex justify-between items-center py-1 border-b border-gray-700 last:border-b-0';
+                        const highlightClass = lap.isEdited ? 'text-yellow-400' : (lap.time < 5000 ? 'text-red-400 font-bold' : '');
+                        li.innerHTML = `
+                            <span class="text-sm text-gray-300">#${session.laps.length - lapIndex}</span>
+                            <span class="font-mono text-lg ${highlightClass}">${formatTime(lap.time)}</span>
+                        `;
+                        linkedLapList.appendChild(li);
+                    });
+                });
+                linkedLapSection.classList.remove('hidden');
+            } else {
+                linkedLapSection.classList.add('hidden');
+            }
+        }
+
+        function updateStats() {
+            totalLapsElement.textContent = `Total Pieces: ${laps.length}`;
+            if (laps.length > 0) {
+                const totalMilliseconds = laps.reduce((sum, lap) => sum + lap.time, 0);
+                averageMilliseconds = totalMilliseconds / laps.length;
+                averageTimeElement.textContent = `Average Time: ${formatTime(averageMilliseconds)}`;
+            } else {
+                averageMilliseconds = 0;
+                averageTimeElement.textContent = 'Average Time: 00:00:00';
+            }
+        }
+
+        function checkLapRange(averageMs) {
+            const minMs = getRangeMs(minHoursInput, minMinutesInput, minSecondsInput);
+            const maxMs = getRangeMs(maxHoursInput, maxMinutesInput, maxSecondsInput);
+
+            rangeStatus.className = 'h-8 w-32 mt-2 mx-auto rounded-md';
+
+            if (laps.length === 0 || isNaN(minMs) || isNaN(maxMs) || minMs >= maxMs) {
+                return;
+            }
+
+            if (averageMs < minMs) {
+                rangeStatus.classList.add('bg-green-400');
+            } else if (averageMs >= minMs && averageMs <= maxMs) {
+                rangeStatus.classList.add('bg-yellow-400');
+            } else {
+                rangeStatus.classList.add('bg-red-400');
+            }
+        }
+
+        async function printData() {
+            const secondaryTitle = secondaryTitleInput.value || 'N/A';
+            const notes = notesInput.value || '';
+            const myTotalLaps = laps.length;
+            const myTotalTime = formatTime(elapsedTime + pausedLapTime);
+            const myAverageTime = formatTime(averageMilliseconds);
+
+            const myMinRange = formatRange({
+                h: minHoursInput.value,
+                m: minMinutesInput.value,
+                s: minSecondsInput.value
+            });
+            const myMaxRange = formatRange({
+                h: maxHoursInput.value,
+                m: maxMinutesInput.value,
+                s: maxSecondsInput.value
+            });
+
+            const myRangeDisplay = (minHoursInput.value || minMinutesInput.value || minSecondsInput.value || maxHoursInput.value || maxMinutesInput.value || maxSecondsInput.value) ? `
+                <li class="stats-item">
+                    <span>Range:</span>
+                    <span>${myMinRange} - ${myMaxRange}</span>
+                </li>
+            ` : '';
+
+            const notesDisplay = notes ? `
+                <p style="text-align: left; font-weight: normal; margin-top: 1rem; padding: 0 20px;">
+                    <span style="font-weight: bold;">Notes:</span> ${notes.replace(/\n/g, '<br>')}
+                </p>
+            ` : '';
+
+            let allLinkedDataHtml = '';
+            if (linkedSessions.length > 0) {
+                linkedSessions.forEach(session => {
+                    const totalLinkedTime = session.laps.reduce((sum, lap) => sum + lap.time, 0);
+                    const linkedTotalLapsCount = session.laps.length;
+                    const linkedAverage = session.averageTime;
+                    const linkedMinRange = formatRange(session.minRange);
+                    const linkedMaxRange = formatRange(session.maxRange);
+                    const rangeDisplay = (session.minRange.h || session.minRange.m || session.minRange.s || session.maxRange.h || session.minRange.m || session.maxRange.s) ? `
+                        <li class="stats-item">
+                            <span>Range:</span>
+                            <span>${linkedMinRange} - ${linkedMaxRange}</span>
+                        </li>
+                    ` : '';
+
+                    const linkedNotesDisplay = session.notes ? `
+                        <p style="text-align: left; font-weight: normal; margin-top: 1rem; padding: 0 20px;">
+                            <span style="font-weight: bold;">Notes:</span> ${session.notes.replace(/\n/g, '<br>')}
+                        </p>
+                    ` : '';
+
+                    allLinkedDataHtml += `
+                        <div class="section-divider"></div>
+                        <h2>${session.title}</h2>
+                        <ul class="stats-list">
+                            <li class="stats-item">
+                                <span>Total Time:</span>
+                                <span>${formatTime(totalLinkedTime)}</span>
+                            </li>
+                            <li class="stats-item">
+                                <span>Total Pieces:</span>
+                                <span>${linkedTotalLapsCount}</span>
+                            </li>
+                            <li class="stats-item">
+                                <span>Average Time:</span>
+                                <span>${formatTime(linkedAverage)}</span>
+                            </li>
+                            ${rangeDisplay}
+                        </ul>
+                        ${linkedNotesDisplay}
+                    `;
+                });
+            }
+
+            const printWindow = window.open('', '_blank');
+
+            const printContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>2Pines Cycle Timer - Print Preview</title>
+                    <link rel="preconnect" href="https://fonts.googleapis.com">
+                    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+                    <style>
+                        body {
+                            font-family: 'Inter', sans-serif;
+                            padding: 20px;
+                            color: #1f2937;
+                            font-size: 16px;
+                        }
+                        h1, h2, h3, p {
+                            text-align: center;
+                            font-weight: bold;
+                            margin-bottom: 0.5em;
+                        }
+                        .stats-list {
+                            list-style-type: none;
+                            padding: 0;
+                            max-width: 400px;
+                            margin: 0 auto;
+                        }
+                        .stats-item {
+                            display: flex;
+                            justify-content: space-between;
+                            border-bottom: 1px solid #e5e7eb;
+                            padding: 8px 0;
+                        }
+                        .stats-item:last-child {
+                            border-bottom: none;
+                        }
+                        .section-divider {
+                            border-top: 2px dashed #e5e7eb;
+                            margin: 2rem 0;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>2Pines Cycle Timer Data</h1>
+                        <p class="print-secondary-title">${secondaryTitle}</p>
+                    </div>
+                    <ul class="stats-list">
+                        <li class="stats-item">
+                            <span>Total Time:</span>
+                            <span>${myTotalTime}</span>
+                        </li>
+                        <li class="stats-item">
+                            <span>Total Pieces:</span>
+                            <span>${myTotalLaps}</span>
+                        </li>
+                        <li class="stats-item">
+                            <span>Average Time:</span>
+                            <span>${myAverageTime}</span>
+                        </li>
+                        ${myRangeDisplay}
+                    </ul>
+                    ${notesDisplay}
+                    ${allLinkedDataHtml}
+                </body>
+                </html>
+            `;
+
+            printWindow.document.open();
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            if (event.key === ' ' && isRunning) {
+                // record a lap
+                event.preventDefault();
+                recordLap();
+            } else if (event.key === 'Enter') {
+                // Start or pause the timer
+                event.preventDefault();
+                if (isRunning) {
+                    pauseTimer();
+                } else {
+                    startTimer();
+                }
+            } else if (event.key === 'r' || event.key === 'R') {
+                event.preventDefault();
+                showConfirmationModal('Are you sure you want to reset the timer and delete all laps?', resetTimer);
+            }
+        });
+
+        // Event listener for the share/view dropdown
+        toggleShareSectionBtn.addEventListener('click', () => {
+            shareSectionContent.classList.toggle('hidden');
+            dropdownArrow.classList.toggle('rotate-arrow');
+        });
+
+        // Event listener for the copy share link button
+        copyShareLinkBtn.addEventListener('click', generateShareableLink);
+
+        // Event listener for the load linked data button
+        loadLinkedBtn.addEventListener('click', () => {
+            const encodedData = linkIdInput.value.split('#')[1];
+            if (encodedData) {
+                try {
+                    const decodedData = atob(encodedData);
+                    const data = JSON.parse(decodedData);
+                    linkedSessions.push({
+                        title: data.secondaryTitle || 'Linked Session',
+                        laps: data.laps || [],
+                        averageTime: data.averageTime || 0,
+                        minRange: data.minRange || { h: '', m: '', s: '' },
+                        maxRange: data.maxRange || { h: '', m: '', s: '' },
+                        notes: data.notes || ''
+                    });
+                    linkedDataStatus.textContent = "Data loaded from provided link.";
+                    displayLinkedSessions();
+                } catch (e) {
+                    linkedDataStatus.textContent = "Error: Invalid link format.";
+                }
+            } else {
+                linkedDataStatus.textContent = "Please paste a valid shareable link.";
+            }
+        });
+
+        // Event listener for the clear link input button
+        clearLinkInputBtn.addEventListener('click', () => {
+            linkIdInput.value = '';
+        });
+
+        // Event listener for the clear all linked sessions button
+        clearAllLinkedBtn.addEventListener('click', () => {
+            linkedSessions = [];
+            linkedLapList.innerHTML = '';
+            linkedDataStatus.textContent = "All linked sessions cleared.";
+            linkedLapSection.classList.add('hidden');
+        });
+
+        // Event listener for remove lap button
+        lapList.addEventListener('click', (event) => {
+            if (event.target.classList.contains('remove-lap-btn')) {
+                const index = event.target.getAttribute('data-index');
+                laps.splice(index, 1);
+                updateAllViews();
+            }
+        });
+
+        // Event listener for editable lap time
+        lapList.addEventListener('blur', (event) => {
+            if (event.target.classList.contains('editable-lap-time')) {
+                const index = event.target.getAttribute('data-index');
+                const newTimeString = event.target.textContent;
+                const newTimeMs = parseTime(newTimeString);
+                if (newTimeMs !== null) {
+                    if (laps[index].time !== newTimeMs) {
+                        laps[index].time = newTimeMs;
+                        laps[index].isEdited = true;
+                    }
+                } else {
+                    event.target.textContent = formatTime(laps[index].time);
+                }
+                updateAllViews();
+            }
+        }, true); // Use capture to ensure event is handled before it bubbles
+
+        // Event listener for removing a linked session
+        linkedLapList.addEventListener('click', (event) => {
+            if (event.target.classList.contains('remove-linked-session-btn')) {
+                const index = event.target.getAttribute('data-index');
+                linkedSessions.splice(index, 1);
+                displayLinkedSessions();
+            }
+        });
+
+        // Event listener for range inputs to save state
+        document.querySelectorAll('#minHoursInput, #minMinutesInput, #minSecondsInput, #maxHoursInput, #maxMinutesInput, #maxSecondsInput, #secondaryTitleInput, #notesInput').forEach(input => {
+            input.addEventListener('change', saveState);
+        });
+
+        startBtn.addEventListener('click', startTimer);
+        pauseBtn.addEventListener('click', pauseTimer);
+        lapBtn.addEventListener('click', recordLap);
+        resetBtn.addEventListener('click', () => {
+            showConfirmationModal('Are you sure you want to reset the timer and delete all laps?', resetTimer);
+        });
+        printBtn.addEventListener('click', printData);
+
+        // Initial load
+        window.onload = () => {
+            // Also load any state from a standard URL hash or local storage
+            loadState();
+        };
+
+    </script>
+</body>
+
+</html>
